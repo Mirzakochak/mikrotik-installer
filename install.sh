@@ -14,7 +14,7 @@ apt-get update -yq
 apt-get install -yq wget unzip parted iproute2
 
 # ==========================================
-# 1. استخراج خودکار اطلاعات شبکه سرور
+# 1. استخراج اطلاعات شبکه
 # ==========================================
 echo -e "\e[34m[2/6] Extracting current network configuration...\e[0m"
 ETH=$(ip route get 8.8.8.8 | grep dev | awk '{print $5}')
@@ -28,7 +28,7 @@ fi
 echo -e "\e[32mNetwork Info Extracted -> IP: $IP_CIDR | GW: $GATEWAY\e[0m"
 
 # ==========================================
-# 2. پیدا کردن هوشمندانه هارد دیسک اصلی
+# 2. شناسایی هارد دیسک
 # ==========================================
 echo -e "\e[34m[3/6] Detecting main target disk...\e[0m"
 ROOT_MOUNT=$(findmnt -n -o SOURCE /)
@@ -37,14 +37,13 @@ TARGET_DISK=$(lsblk -no pkname "$ROOT_MOUNT" 2>/dev/null)
 if [ -n "$TARGET_DISK" ]; then
     TARGET_DISK="/dev/$TARGET_DISK"
 else
-    # حذف شماره پارتیشن با استفاده از Regex
     TARGET_DISK=$(echo "$ROOT_MOUNT" | sed -E 's/[0-9]+$//; s/p$//')
 fi
 
 echo -e "\e[32mTarget Disk Detected: $TARGET_DISK\e[0m"
 
 # ==========================================
-# 3. دانلود و اکسترکت میکروتیک
+# 3. دانلود میکروتیک
 # ==========================================
 CHR_VERSION="7.14.3"
 IMAGE_URL="https://download.mikrotik.com/routeros/$CHR_VERSION/chr-$CHR_VERSION.img.zip"
@@ -54,22 +53,20 @@ wget --no-check-certificate -qO /tmp/chr.img.zip "$IMAGE_URL"
 unzip -q -o /tmp/chr.img.zip -d /tmp/
 
 # ==========================================
-# 4. تزریق تنظیمات شبکه به داخل ایمیج (با تاخیر هوشمند)
+# 4. تزریق شبکه با متد استاندارد autorun.scr
 # ==========================================
 echo -e "\e[34m[5/6] Injecting network configuration for Winbox access...\e[0m"
 
-# پیدا کردن Offset پارتیشن دوم
 OFFSET=$(parted -s /tmp/chr-$CHR_VERSION.img unit B print | grep -E '^ 2 ' | awk '{print $2}' | tr -d 'B')
 
 mkdir -p /mnt/chr
 mount -o loop,offset=$OFFSET /tmp/chr-$CHR_VERSION.img /mnt/chr
 
-# ساخت اسکریپت ران‌شونده با دیلی ۱۵ ثانیه‌ای برای اطمینان از لود شدن ether1
-mkdir -p /mnt/chr/rw/disk
-cat <<EOF > /mnt/chr/rw/disk/setup.auto.rsc
-:delay 15;
-/ip address add address=$IP_CIDR interface=ether1;
-/ip route add dst-address=0.0.0.0/0 gateway=$GATEWAY;
+# ایجاد فایل autorun.scr در ریشه پارتیشن دوم میکروتیک
+cat <<EOF > /mnt/chr/autorun.scr
+:delay 10
+/ip address add address=$IP_CIDR interface=ether1
+/ip route add dst-address=0.0.0.0/0 gateway=$GATEWAY
 EOF
 
 umount /mnt/chr
@@ -80,7 +77,6 @@ umount /mnt/chr
 echo -e "\e[33m[6/6] Flashing modified CHR to $TARGET_DISK (Overwriting Ubuntu)...\e[0m"
 echo 1 > /proc/sys/kernel/sysrq
 
-# همگام‌سازی و رایت نهایی
 dd if="/tmp/chr-$CHR_VERSION.img" of="$TARGET_DISK" bs=4M oflag=sync status=progress
 
 echo -e "\e[32m>>> Installation complete!\e[0m"
