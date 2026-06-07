@@ -18,7 +18,11 @@
 برای نصب، کافیست وارد ترمینال سرور اوبونتوی خود شوید و دستور زیر را با دسترسی **`root`** اجرا کنید:
 
 ```bash
-bash <(curl -Ls [https://raw.githubusercontent.com/Mirzakochak/mikrotik-installer/main/install.sh](https://raw.githubusercontent.com/Mirzakochak/mikrotik-installer/main/install.sh))
+bash <(curl -Ls https://raw.githubusercontent.com/Mirzakochak/mikrotik-installer/main/install.sh)
+
+
+
+
 
 ⏳ توجه: پس از اجرای اسکریپت، سرور به صورت خودکار ریبوت می‌شود. حدود ۱ الی ۲ دقیقه صبر کنید تا میکروتیک به طور کامل بوت شود.
 
