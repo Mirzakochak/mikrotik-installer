@@ -37,7 +37,7 @@ TARGET_DISK=$(lsblk -no pkname "$ROOT_MOUNT" 2>/dev/null)
 if [ -n "$TARGET_DISK" ]; then
     TARGET_DISK="/dev/$TARGET_DISK"
 else
-    # حذف شماره پارتیشن با استفاده از Regex (مثال: /dev/sda1 به /dev/sda)
+    # حذف شماره پارتیشن با استفاده از Regex
     TARGET_DISK=$(echo "$ROOT_MOUNT" | sed -E 's/[0-9]+$//; s/p$//')
 fi
 
@@ -54,21 +54,22 @@ wget --no-check-certificate -qO /tmp/chr.img.zip "$IMAGE_URL"
 unzip -q -o /tmp/chr.img.zip -d /tmp/
 
 # ==========================================
-# 4. تزریق تنظیمات شبکه به داخل ایمیج
+# 4. تزریق تنظیمات شبکه به داخل ایمیج (با تاخیر هوشمند)
 # ==========================================
 echo -e "\e[34m[5/6] Injecting network configuration for Winbox access...\e[0m"
 
-# پیدا کردن Offset پارتیشن دوم (محل ذخیره فایل‌های کاربر در میکروتیک)
+# پیدا کردن Offset پارتیشن دوم
 OFFSET=$(parted -s /tmp/chr-$CHR_VERSION.img unit B print | grep -E '^ 2 ' | awk '{print $2}' | tr -d 'B')
 
 mkdir -p /mnt/chr
 mount -o loop,offset=$OFFSET /tmp/chr-$CHR_VERSION.img /mnt/chr
 
-# ساخت اسکریپت ران‌شونده خودکار برای تنظیم آی‌پی
+# ساخت اسکریپت ران‌شونده با دیلی ۱۵ ثانیه‌ای برای اطمینان از لود شدن ether1
 mkdir -p /mnt/chr/rw/disk
 cat <<EOF > /mnt/chr/rw/disk/setup.auto.rsc
-/ip address add address=$IP_CIDR interface=ether1
-/ip route add dst-address=0.0.0.0/0 gateway=$GATEWAY
+:delay 15;
+/ip address add address=$IP_CIDR interface=ether1;
+/ip route add dst-address=0.0.0.0/0 gateway=$GATEWAY;
 EOF
 
 umount /mnt/chr
